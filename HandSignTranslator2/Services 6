@@ -1,0 +1,78 @@
+//
+//  Services:SignLanguageTranslator.swift
+//  HandSignTranslator2
+//
+//  Created by Elisa Guadalupe Alejos Torres on 16/11/25.
+//
+
+import Foundation
+import Combine
+import SwiftUI
+
+
+class SignLanguageTranslator: ObservableObject {
+    @Published var translatedSigns: [String] = []
+    @Published var currentSignIndex: Int = -1
+    @Published var isAnimating: Bool = false
+    
+    private var cancellables = Set<AnyCancellable>()
+    private var timer: AnyCancellable?
+
+     
+    private let animationInterval: Double = 1.2
+    
+    
+    func translate(_ text: String) {
+        stopAnimation()
+        let uppercaseText = text.uppercased()
+        
+        
+        let characters = uppercaseText.filter { character in
+            character.isLetter || (character.isNumber && character != "0")
+        }
+        
+        translatedSigns = characters.map { String($0) }
+        currentSignIndex = -1
+        
+        if !translatedSigns.isEmpty {
+            startSequentialAnimation()
+        }
+    }
+    
+    private func startSequentialAnimation() {
+        guard !translatedSigns.isEmpty else { return }
+        
+        isAnimating = true
+        currentSignIndex = 0
+        timer?.cancel()
+
+        // Assign the AnyCancellable returned by sink to `timer`
+        timer = Timer.publish(every: animationInterval, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                self?.advanceIndex()
+            }
+    }
+    
+    private func advanceIndex() {
+        if currentSignIndex < translatedSigns.count - 1 {
+            currentSignIndex += 1
+        } else {
+            stopAnimation()
+        }
+    }
+    
+    
+    func stopAnimation() {
+        timer?.cancel()
+        timer = nil
+        isAnimating = false
+    }
+    
+    
+    func clear() {
+        stopAnimation()
+        translatedSigns = []
+        currentSignIndex = -1
+    }
+}
